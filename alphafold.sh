@@ -1,7 +1,5 @@
 #!/bin/bash
 
-echo -e "version 10"
-
 mkdir -p "/scratch/cluster_scratch/$USER/alphafold"
 procdir="/scratch/cluster_scratch/$USER/alphafold/"
 
