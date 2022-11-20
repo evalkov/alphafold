@@ -1,16 +1,11 @@
 #!/bin/bash
 
-# location of script for visualizing output
-vis_script="/mnt/RBL-MRRD-CryoEM/static/scripts/visualize_alphafold_results-v2.py"
-
-########## DO NOT EDIT BELOW THIS LINE ###########
-
 mkdir -p "/scratch/cluster_scratch/$USER/alphafold"
 procdir="/scratch/cluster_scratch/$USER/alphafold/"
 
-if [[ -r /mnt/projects/RNABL-GRID-SPE/active/Valkov/alphafold/ ]]; then 
-	storage_dir="/mnt/projects/RNABL-GRID-SPE/active/Valkov/alphafold/" 
-else 
+if [[ -r /mnt/projects/RNABL-GRID-SPE/active/Valkov/alphafold/ ]]; then
+	storage_dir="/mnt/projects/RNABL-GRID-SPE/active/Valkov/alphafold/"
+else
 	storage_dir="$procdir"
 fi
 
