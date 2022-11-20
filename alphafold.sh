@@ -105,7 +105,7 @@ set ray_trace_mode, 0
 mset 1 x60
 movie.nutate(1,60,angle=120)
 mpng "$procdir"/"$af2dir"/test.png
-" > $procdir"/"$af2dir"_pymol.pml
+" > "$procdir"/"$af2dir"_pymol.pml
 
 echo "\
 cp "$procdir"/"$af2dir"_pymol.pml "$procdir"/"$af2dir"/
