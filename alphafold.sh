@@ -205,6 +205,9 @@ python3 "$procdir"/"$af2dir"/"$af2dir"_vis.py --input_dir "$procdir"/"$af2dir"/ 
 tar cJf  "$procdir"/"$af2dir"/"$af2dir"_top_ranked.xz "$procdir"/"$af2dir"/ranked_*.pdb
 mutt -e 'set content_type=text/html' -s \"$af2dir\" -a "$procdir"/"$af2dir"/"$af2dir"_top_ranked.xz -a "$procdir"/"$af2dir"/*.png -a "$procdir""$af2dir"/animated.gif -e 'my_hdr From:AlphaFold2 (AlphaFold2)' -b valkove2@nih.gov -- "$USER"@nih.gov < "$procdir"/"$af2dir"/"$af2dir"_mail.htm
 rm "$procdir"/"$af2dir"/"$af2dir"_top_ranked.xz
+rm "$procdir"/"$af2dir"/"$af2dir"_mail.htm
+rm "$procdir"/"$af2dir"/"$af2dir"_vis.py
+rm "$procdir"/"$af2dir"/"$af2dir"_pymol.pml
 rsync -vagu "$procdir"/"$af2dir" "$storage_dir"
 " >> "$procdir"/"$af2dir"_af2.sh
 
