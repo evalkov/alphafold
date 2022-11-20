@@ -105,10 +105,10 @@ set ray_trace_mode, 0
 mset 1 x60
 movie.nutate(1,60,angle=120)
 mpng "$procdir"/"$af2dir"/test.png
-" > /tmp/$USER/"$af2dir"_pymol.pml
+" > $procdir"/"$af2dir"_pymol.pml
 
 echo "\
-cp /tmp/"$USER"/"$af2dir"_pymol.pml "$procdir"/"$af2dir"/
+cp "$procdir"/"$af2dir"_pymol.pml "$procdir"/"$af2dir"/
 pymol -qc "$procdir"/"$af2dir"/"$af2dir"_pymol.pml
 convert -dispose previous -delay 10 -loop 0 "$procdir"/"$af2dir"/*.png -coalesce -scale 800x800 "$procdir"/"$af2dir"/animated.gif
 rm "$procdir"/"$af2dir"/test*.png
@@ -192,15 +192,15 @@ model_names = [f'{args.input_dir}/result_model_{f}{\"_multimer\" if is_multimer 
 
 pae_plddt_per_model = get_pae_plddt(model_names)
 generate_output_images(feature_dict, args.output_dir if args.output_dir else args.input_dir, args.name, pae_plddt_per_model)
-" > /tmp/$USER/"$af2dir"_vis.py
+" > "$procdir"/"$af2dir"_vis.py
 
 echo "\
 <img src=\"cid:animated.gif\" />
-" > /tmp/$USER/"$af2dir"_mail.htm
+" > "$procdir"/"$af2dir"_mail.htm
 
 echo "\
-cp /tmp/"$USER"/"$af2dir"_vis.py "$procdir"/"$af2dir"/
-cp /tmp/"$USER"/"$af2dir"_mail.htm "$procdir"/"$af2dir"/
+cp "$procdir"/"$af2dir"_vis.py "$procdir"/"$af2dir"/
+cp "$procdir"/"$af2dir"_mail.htm "$procdir"/"$af2dir"/
 python3 "$procdir"/"$af2dir"/"$af2dir"_vis.py --input_dir "$procdir"/"$af2dir"/ --name "$af2dir"
 tar cJf  "$procdir"/"$af2dir"/"$af2dir"_top_ranked.xz "$procdir"/"$af2dir"/ranked_*.pdb
 mutt -e 'set content_type=text/html' -s \"$af2dir\" -a "$procdir"/"$af2dir"/"$af2dir"_top_ranked.xz -a "$procdir"/"$af2dir"/*.png -a "$procdir""$af2dir"/animated.gif -e 'my_hdr From:AlphaFold2 (AlphaFold2)' -b valkove2@nih.gov -- "$USER"@nih.gov < "$procdir"/"$af2dir"/"$af2dir"_mail.htm
