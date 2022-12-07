@@ -195,16 +195,8 @@ generate_output_images(feature_dict, args.output_dir if args.output_dir else arg
 " > "$procdir"/"$af2dir"_vis.py
 
 echo "\
-<html>
-  <body>
-    <div>
-      <img src="animated.gif" alt="A fun GIF" />
-      <img src="\"$af2dir\"_PAE.png" alt="First image" />
-      <img src="\"$af2dir\"_coverage_LDDT.png" alt="Second image" />
-    </div>
-  </body>
-</html>
-" > "$procdir"/"$af2dir"_mail.htm
+<img src=\"cid:animated.gif\" />
+" > "$af2dir"_mail.htm
 
 echo "\
 cp "$procdir"/"$af2dir"_vis.py "$procdir"/"$af2dir"/
