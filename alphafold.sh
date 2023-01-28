@@ -110,7 +110,7 @@ mpng "$procdir"/"$af2dir"/test.png
 echo "\
 cp "$procdir"/"$af2dir"_pymol.pml "$procdir"/"$af2dir"/
 pymol -qc "$procdir"/"$af2dir"/"$af2dir"_pymol.pml
-convert -dispose previous -delay 10 -loop 0 "$procdir"/"$af2dir"/*.png -coalesce -scale 800x800 "$procdir"/"$af2dir"/animated.gif
+convert -dispose previous -delay 10 -loop 0 "$procdir"/"$af2dir"/test*.png -coalesce -scale 800x800 "$procdir"/"$af2dir"/animated.gif
 rm "$procdir"/"$af2dir"/test*.png
 " >> "$procdir"/"$af2dir"_af2.sh
 
