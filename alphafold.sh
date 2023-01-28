@@ -202,9 +202,9 @@ echo "\
 cp "$procdir"/"$af2dir"_vis.py "$procdir"/"$af2dir"/
 cp "$procdir"/"$af2dir"_mail.htm "$procdir"/"$af2dir"/
 python3 "$procdir"/"$af2dir"/"$af2dir"_vis.py --input_dir "$procdir"/"$af2dir"/ --name "$af2dir"
-tar -C "$procdir"/"$af2dir"/ -cJf "$procdir"/"$af2dir"/"$af2dir"_top_ranked.xz ranked_0.pdb ranked_1.pdb ranked_2.pdb ranked_3.pdb ranked_4.pdb
-mutt -e 'set content_type=text/html' -s \"$af2dir\" -a "$procdir"/"$af2dir"/"$af2dir"_top_ranked.xz -a "$procdir"/"$af2dir"/*.png -a "$procdir""$af2dir"/animated.gif -e 'my_hdr From:AlphaFold2 (AlphaFold2)' -b valkove2@nih.gov -- "$USER"@nih.gov < "$procdir"/"$af2dir"/"$af2dir"_mail.htm
-rm "$procdir"/"$af2dir"/"$af2dir"_top_ranked.xz
+tar -C "$procdir"/"$af2dir"/ -czvf "$procdir"/"$af2dir"/"$af2dir"_top_ranked.targz ranked_0.pdb ranked_1.pdb ranked_2.pdb ranked_3.pdb ranked_4.pdb
+mutt -e 'set content_type=text/html' -s \"$af2dir\" -a "$procdir"/"$af2dir"/"$af2dir"_top_ranked.tar.gz -a "$procdir"/"$af2dir"/*.png -a "$procdir""$af2dir"/animated.gif -e 'my_hdr From:AlphaFold2 (AlphaFold2)' -b valkove2@nih.gov -- "$USER"@nih.gov < "$procdir"/"$af2dir"/"$af2dir"_mail.htm
+rm "$procdir"/"$af2dir"/"$af2dir"_top_ranked.tar.gz
 rm "$procdir"/"$af2dir"_mail.htm
 rm "$procdir"/"$af2dir"_vis.py
 rm "$procdir"/"$af2dir"_pymol.pml
