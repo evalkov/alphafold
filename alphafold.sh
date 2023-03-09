@@ -63,7 +63,6 @@ echo "\
 #SBATCH --mail-user="$USER"
 
 module load alphafold/2.3.1_conda
-module load python/3.6.8
 module load pymol/2.3.0
 
 run --fasta_paths="$procdir"/"$seqfile" \
