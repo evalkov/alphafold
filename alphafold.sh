@@ -57,12 +57,12 @@ echo "\
 #SBATCH --gres=gpu:v100:1
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem-per-cpu=20G
-#SBATCH --time=6:00:00
+#SBATCH --mem-per-cpu=10G
+#SBATCH --time=8:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user="$USER"
 
-module load alphafold/2.2.0
+module load alphafold/2.3.1_conda
 module load python/3.6.8
 module load pymol/2.3.0
 
@@ -70,7 +70,7 @@ run --fasta_paths="$procdir"/"$seqfile" \
     --output_dir="$procdir" \
     --db_preset=full_dbs \
     --num_multimer_predictions_per_model=1 \
-    --max_template_date=2021-07-19 \
+    --max_template_date=2022-10-01 \
     --model_preset=multimer
 
 if [ ! -e ""$procdir"/"$af2dir"/ranked_0.pdb" ]; then
