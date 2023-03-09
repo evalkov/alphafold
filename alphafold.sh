@@ -79,11 +79,11 @@ fi
 " > "$procdir"/"$af2dir"_af2.sh
 
 echo "\
-ln -s "$procdir"/"$af2dir"/result_model_1_multimer_v2_pred_0.pkl "$procdir"/"$af2dir"/result_model_1.pkl
-ln -s "$procdir"/"$af2dir"/result_model_2_multimer_v2_pred_0.pkl "$procdir"/"$af2dir"/result_model_2.pkl
-ln -s "$procdir"/"$af2dir"/result_model_3_multimer_v2_pred_0.pkl "$procdir"/"$af2dir"/result_model_3.pkl
-ln -s "$procdir"/"$af2dir"/result_model_4_multimer_v2_pred_0.pkl "$procdir"/"$af2dir"/result_model_4.pkl
-ln -s "$procdir"/"$af2dir"/result_model_5_multimer_v2_pred_0.pkl "$procdir"/"$af2dir"/result_model_5.pkl
+ln -s "$procdir"/"$af2dir"/result_model_1_multimer_v3_pred_0.pkl "$procdir"/"$af2dir"/result_model_1.pkl
+ln -s "$procdir"/"$af2dir"/result_model_2_multimer_v3_pred_0.pkl "$procdir"/"$af2dir"/result_model_2.pkl
+ln -s "$procdir"/"$af2dir"/result_model_3_multimer_v3_pred_0.pkl "$procdir"/"$af2dir"/result_model_3.pkl
+ln -s "$procdir"/"$af2dir"/result_model_4_multimer_v3_pred_0.pkl "$procdir"/"$af2dir"/result_model_4.pkl
+ln -s "$procdir"/"$af2dir"/result_model_5_multimer_v3_pred_0.pkl "$procdir"/"$af2dir"/result_model_5.pkl
 mv "$procdir"/"$seqfile" "$procdir"/"$af2dir"/
 cp "$af2dir".out "$procdir"/"$af2dir"/
 mv "$procdir"/"$af2dir"_af2.sh "$procdir"/"$af2dir"/
