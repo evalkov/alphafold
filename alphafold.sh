@@ -58,7 +58,7 @@ echo "\
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem-per-cpu=10G
-#SBATCH --time=8:00:00
+#SBATCH --time=12:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user="$USER"
 
@@ -79,11 +79,11 @@ fi
 " > "$procdir"/"$af2dir"_af2.sh
 
 echo "\
-ln -s "$procdir"/"$af2dir"/result_model_1_multimer_v3_pred_0.pkl "$procdir"/"$af2dir"/result_model_1.pkl
-ln -s "$procdir"/"$af2dir"/result_model_2_multimer_v3_pred_0.pkl "$procdir"/"$af2dir"/result_model_2.pkl
-ln -s "$procdir"/"$af2dir"/result_model_3_multimer_v3_pred_0.pkl "$procdir"/"$af2dir"/result_model_3.pkl
-ln -s "$procdir"/"$af2dir"/result_model_4_multimer_v3_pred_0.pkl "$procdir"/"$af2dir"/result_model_4.pkl
-ln -s "$procdir"/"$af2dir"/result_model_5_multimer_v3_pred_0.pkl "$procdir"/"$af2dir"/result_model_5.pkl
+ln -s "$procdir"/"$af2dir"/result_model_1_*_0.pkl "$procdir"/"$af2dir"/result_model_1.pkl
+ln -s "$procdir"/"$af2dir"/result_model_2_*_0.pkl "$procdir"/"$af2dir"/result_model_2.pkl
+ln -s "$procdir"/"$af2dir"/result_model_3_*_0.pkl "$procdir"/"$af2dir"/result_model_3.pkl
+ln -s "$procdir"/"$af2dir"/result_model_4_*_0.pkl "$procdir"/"$af2dir"/result_model_4.pkl
+ln -s "$procdir"/"$af2dir"/result_model_5_*_0.pkl "$procdir"/"$af2dir"/result_model_5.pkl
 mv "$procdir"/"$seqfile" "$procdir"/"$af2dir"/
 cp "$af2dir".out "$procdir"/"$af2dir"/
 mv "$procdir"/"$af2dir"_af2.sh "$procdir"/"$af2dir"/
