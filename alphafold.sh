@@ -28,7 +28,7 @@ Usage: alphafold fastafile.fa\n"
 if [ ! "$1" = "" ]; then
 	seqfile="$1"
 	cp $seqfile "$procdir"
-	af2dir=`echo $seqfile | sed 's/\.[^.]*$//'`
+	af2dir=`echo $seqfile | sed 's|.*/\([^/]*\)\..*|\1|'`
 	num_seqs=`grep '^>' $seqfile | wc -l`
 	chain_names=`grep '^>' $seqfile`
 	if [ ! "$chain_names" ]; then
