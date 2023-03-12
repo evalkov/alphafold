@@ -27,8 +27,8 @@ Usage: alphafold fastafile.fa\n"
 
 if [ ! "$1" = "" ]; then
 	seqfile="$1"
-	cp $seqfile "$procdir"
-	af2dir=`echo $seqfile | sed 's|.*/\([^/]*\)\..*|\1|'`
+	af2dir=`echo $seqfile | sed 's|.*/||' | sed 's/\.[^.]*$//'`
+	cp $seqfile "$procdir""$af2dir".fa
 	num_seqs=`grep '^>' $seqfile | wc -l`
 	chain_names=`grep '^>' $seqfile`
 	if [ ! "$chain_names" ]; then
@@ -38,45 +38,68 @@ if [ ! "$1" = "" ]; then
         else
 		echo -e "\
 Found $num_seqs protein chains:
-$chain_names
-
-Results will be emailed to $USER@nih.gov.
-All files will be copied to:
-$storage_dir$af2dir "
+$chain_names"
 	fi
 elif [ "$1" = "" ]; then
 	echo -e "Fasta sequence not provided!\n"
 	exit
 fi
 
+len=`sed '/^>/d' $1 | tr -d '\n' | wc -c`
+
+echo -e "No. residues: $len"
+
 echo "\
+
+Results will be emailed to $USER@nih.gov.
+All files will be copied to:
+$storage_dir$af2dir"
+
+
+if [ "$len" -lt 250 ]; then
+  echo "\
 #!/bin/bash
 #SBATCH --job-name=$af2dir
 #SBATCH --output="$af2dir".out
 #SBATCH --partition=gpu
-#SBATCH --gres=gpu:v100:1
+#SBATCH --gres=gpu:p100:1
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem-per-cpu=10G
-#SBATCH --time=12:00:00
+#SBATCH --time=02:00:00" > "$procdir"/"$af2dir"_af2.sh
+elif [ "$len" -gt 250 ]; then
+  echo "\
+#!/bin/bash
+#SBATCH --job-name=$af2dir
+#SBATCH --output="$af2dir".out
+#SBATCH --partition=gpu
+#SBATCH --gres=gpu:v100:2
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem-per-cpu=15G
+#SBATCH --time=20:00:00" > "$procdir"/"$af2dir"_af2.sh
+fi
+
+
+echo "\
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user="$USER"
 
 module load alphafold/2.3.1_conda
 module load pymol/2.3.0
 
-run --fasta_paths="$procdir"/"$seqfile" \
-    --output_dir="$procdir" \
-    --db_preset=full_dbs \
-    --num_multimer_predictions_per_model=1 \
-    --max_template_date=2022-10-01 \
-    --model_preset=multimer
+run --fasta_paths="$procdir"/"$af2dir".fa \
+	--output_dir="$procdir" \
+	--db_preset=full_dbs \
+	--num_multimer_predictions_per_model=1 \
+	--max_template_date=2022-10-01 \
+	--model_preset=multimer
 
 if [ ! -e ""$procdir"/"$af2dir"/ranked_0.pdb" ]; then
 	tail -50 "$af2dir".out | mutt -s \"$af2dir\" -e 'my_hdr From:AlphaFold2 (AlphaFold2)' -b valkove2@nih.gov -- "$USER"@nih.gov
 	exit
 fi
-" > "$procdir"/"$af2dir"_af2.sh
+" >> "$procdir"/"$af2dir"_af2.sh
 
 echo "\
 ln -s "$procdir"/"$af2dir"/result_model_1_*_0.pkl "$procdir"/"$af2dir"/result_model_1.pkl
@@ -84,7 +107,7 @@ ln -s "$procdir"/"$af2dir"/result_model_2_*_0.pkl "$procdir"/"$af2dir"/result_mo
 ln -s "$procdir"/"$af2dir"/result_model_3_*_0.pkl "$procdir"/"$af2dir"/result_model_3.pkl
 ln -s "$procdir"/"$af2dir"/result_model_4_*_0.pkl "$procdir"/"$af2dir"/result_model_4.pkl
 ln -s "$procdir"/"$af2dir"/result_model_5_*_0.pkl "$procdir"/"$af2dir"/result_model_5.pkl
-mv "$procdir"/"$seqfile" "$procdir"/"$af2dir"/
+mv "$procdir"/"$af2dir".fa "$procdir"/"$af2dir"/
 cp "$af2dir".out "$procdir"/"$af2dir"/
 mv "$procdir"/"$af2dir"_af2.sh "$procdir"/"$af2dir"/
 " >> "$procdir"/"$af2dir"_af2.sh
