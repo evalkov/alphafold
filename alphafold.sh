@@ -18,10 +18,12 @@ fi
 
 echo -e "\
 
-###########################################################
-## Script to submit AlphaFold2 jobs to the FRCE cluster. ##
-## Written by Eugene Valkov, National Cancer Institute.  ##
-###########################################################
+alphafold_version='2.3.1_conda'
+
+Script to submit AlphaFold2 jobs to the FRCE cluster.
+(C) Eugene Valkov, National Cancer Institute, U.S.A.
+AlphaFold version: $alphafold_version                        
+
 
 Usage: alphafold fastafile.fa\n"
 
@@ -96,7 +98,7 @@ echo "\
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user="$USER"
 
-module load alphafold/2.3.1_conda
+module load alphafold/"$alphafold_version"
 module load pymol/2.3.0
 
 run --fasta_paths="$procdir"/"$af2dir".fa \
