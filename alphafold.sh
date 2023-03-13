@@ -47,8 +47,6 @@ fi
 
 len=`sed '/^>/d' $1 | tr -d '\n' | wc -c`
 
-echo -e "No. residues: $len"
-
 echo "\
 
 Results will be emailed to $USER@nih.gov.
@@ -56,7 +54,8 @@ All files will be copied to:
 $storage_dir$af2dir"
 
 
-if [ "$len" -lt 250 ]; then
+if (( "$len" <= 250 )); then
+  echo -e "Found $len residues, setting 2h time limit."
   echo "\
 #!/bin/bash
 #SBATCH --job-name=$af2dir
@@ -67,7 +66,20 @@ if [ "$len" -lt 250 ]; then
 #SBATCH --cpus-per-task=8
 #SBATCH --mem-per-cpu=10G
 #SBATCH --time=02:00:00" > "$procdir"/"$af2dir"_af2.sh
-elif [ "$len" -gt 250 ]; then
+elif (( "$len" >= 250 && "$len" <= 1500 )); then
+  echo -e "Found $len residues, setting 16h time limit."
+  echo "\
+#!/bin/bash
+#SBATCH --job-name=$af2dir
+#SBATCH --output="$af2dir".out
+#SBATCH --partition=gpu
+#SBATCH --gres=gpu:v100:2
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem-per-cpu=10G
+#SBATCH --time=16:00:00" > "$procdir"/"$af2dir"_af2.sh
+elif (( "$len" >= 1500 )); then
+  echo -e "Found is $len residues, setting 36h time limit."
   echo "\
 #!/bin/bash
 #SBATCH --job-name=$af2dir
@@ -77,9 +89,8 @@ elif [ "$len" -gt 250 ]; then
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem-per-cpu=15G
-#SBATCH --time=20:00:00" > "$procdir"/"$af2dir"_af2.sh
+#SBATCH --time=36:00:00" > "$procdir"/"$af2dir"_af2.sh
 fi
-
 
 echo "\
 #SBATCH --mail-type=ALL
@@ -92,7 +103,7 @@ run --fasta_paths="$procdir"/"$af2dir".fa \
 	--output_dir="$procdir" \
 	--db_preset=full_dbs \
 	--num_multimer_predictions_per_model=1 \
-	--max_template_date=2022-10-01 \
+	--max_template_date=2020-05-14 \
 	--model_preset=multimer
 
 if [ ! -e ""$procdir"/"$af2dir"/ranked_0.pdb" ]; then
