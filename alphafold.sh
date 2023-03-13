@@ -16,9 +16,9 @@ if [ ! "$submithost" = "fsitgl-head01p.ncifcrf.gov" ]; then
 	exit
 fi
 
-echo -e "\
-
 alphafold_version='2.3.1_conda'
+
+echo -e "\
 
 Script to submit AlphaFold2 jobs to the FRCE cluster.
 (C) Eugene Valkov, National Cancer Institute, U.S.A.
