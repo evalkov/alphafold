@@ -17,13 +17,14 @@ if [ ! "$submithost" = "fsitgl-head01p.ncifcrf.gov" ]; then
 fi
 
 alphafold_version='2.3.1_conda'
+db_version='2020-05-14'
 
 echo -e "\
 
 Script to submit AlphaFold2 jobs to the FRCE cluster.
 (C) Eugene Valkov, National Cancer Institute, U.S.A.
 AlphaFold version: $alphafold_version                        
-
+Template release date cutoff: $db_version
 
 Usage: alphafold fastafile.fa\n"
 
@@ -105,7 +106,7 @@ run --fasta_paths="$procdir"/"$af2dir".fa \
 	--output_dir="$procdir" \
 	--db_preset=full_dbs \
 	--num_multimer_predictions_per_model=1 \
-	--max_template_date=2020-05-14 \
+	--max_template_date="$db_version" \
 	--model_preset=multimer
 
 if [ ! -e ""$procdir"/"$af2dir"/ranked_0.pdb" ]; then
