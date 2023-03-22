@@ -58,7 +58,7 @@ $storage_dir$af2dir"
 
 
 if (( "$len" <= 250 )); then
-  echo -e "Found $len residues, setting 2h time limit."
+  echo -e "Found $len residues, setting 3h time limit."
   echo "\
 #!/bin/bash
 #SBATCH --job-name=$af2dir
@@ -68,7 +68,7 @@ if (( "$len" <= 250 )); then
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem-per-cpu=10G
-#SBATCH --time=02:00:00" > "$procdir"/"$af2dir"_af2.sh
+#SBATCH --time=03:00:00" > "$procdir"/"$af2dir"_af2.sh
 elif (( "$len" >= 250 && "$len" <= 1500 )); then
   echo -e "Found $len residues, setting 16h time limit."
   echo "\
@@ -82,7 +82,7 @@ elif (( "$len" >= 250 && "$len" <= 1500 )); then
 #SBATCH --mem-per-cpu=10G
 #SBATCH --time=16:00:00" > "$procdir"/"$af2dir"_af2.sh
 elif (( "$len" >= 1500 )); then
-  echo -e "Found is $len residues, setting 36h time limit."
+  echo -e "Found $len residues, setting 36h time limit."
   echo "\
 #!/bin/bash
 #SBATCH --job-name=$af2dir
