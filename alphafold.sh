@@ -1,5 +1,10 @@
 #!/bin/bash
 
+alphafold_version='2.3.1_conda'
+db_version='2020-05-14'
+
+################### DO NOT EDIT BELOW ################
+
 mkdir -p "/scratch/cluster_scratch/$USER/alphafold"
 procdir="/scratch/cluster_scratch/$USER/alphafold/"
 
@@ -15,9 +20,6 @@ if [ ! "$submithost" = "fsitgl-head01p.ncifcrf.gov" ]; then
 	echo -e "\nYou must be logged in to FRCE cluster to use this script.\n"
 	exit
 fi
-
-alphafold_version='2.3.1_conda'
-db_version='2020-05-14'
 
 echo -e "\
 
@@ -49,12 +51,6 @@ elif [ "$1" = "" ]; then
 fi
 
 len=`sed '/^>/d' $1 | tr -d '\n' | wc -c`
-
-echo "\
-
-Results will be emailed to $USER@nih.gov.
-All files will be copied to:
-$storage_dir$af2dir"
 
 
 if (( "$len" <= 250 )); then
@@ -244,7 +240,42 @@ rm "$procdir"/"$af2dir"/"$af2dir"_top_ranked.tar.gz
 rm "$procdir"/"$af2dir"_mail.htm
 rm "$procdir"/"$af2dir"_vis.py
 rm "$procdir"/"$af2dir"_pymol.pml
+rm "$procdir"/"$af2dir"/result_model_1.pkl
+rm "$procdir"/"$af2dir"/result_model_2.pkl
+rm "$procdir"/"$af2dir"/result_model_3.pkl
+rm "$procdir"/"$af2dir"/result_model_4.pkl
+rm "$procdir"/"$af2dir"/result_model_5.pkl
+" >> "$procdir"/"$af2dir"_af2.sh
+
+echo "\
+
+Top-scoring predictions will be emailed to $USER@nih.gov."
+
+
+if [ -e "$HOME"/.boxpassword ]; then
+	username=`echo "$USER"@nih.gov`
+	password=`awk '{print $1}' $HOME/.boxpassword`
+	echo "\
+set ftp:ssl-force true; 
+connect ftp://ftp.box.com;
+user '$username' '$password';
+cd Alphafold;
+mirror -R "$procdir"/"$af2dir";
+bye" > $HOME/.lftpconfig
+	chmod 600 $HOME/.lftpconfig
+        echo "\
+lftp -f $HOME/.lftpconfig
+rm $HOME/.lftpconfig
+" >> "$procdir"/"$af2dir"_af2.sh
+echo "\
+All files will be copied to box.com under $USER@nih.gov account."
+	else
+        echo "\
 rsync -vagu "$procdir"/"$af2dir" "$storage_dir"
 " >> "$procdir"/"$af2dir"_af2.sh
+        echo "\
+All files will be copied to:
+$storage_dir$af2dir"
+fi
 
 sbatch "$procdir"/"$af2dir"_af2.sh
