@@ -257,15 +257,16 @@ if [ -e "$HOME"/.boxpassword ]; then
 	password=`awk '{print $1}' $HOME/.boxpassword`
 	echo "\
 set ftp:ssl-force true; 
+set mirror:parallel-directories true;
 connect ftp://ftp.box.com;
 user '$username' '$password';
 cd Alphafold;
-mirror -R "$procdir"/"$af2dir";
-bye" > $HOME/.lftpconfig
-	chmod 600 $HOME/.lftpconfig
+mirror -R --no-symlinks "$procdir"/"$af2dir";
+bye" > $HOME/."$af2dir".lftpconfig
+	chmod 600 $HOME/."$af2dir".lftpconfig
         echo "\
-lftp -f $HOME/.lftpconfig
-rm $HOME/.lftpconfig
+lftp -f $HOME/."$af2dir".lftpconfig
+rm $HOME/."$af2dir".lftpconfig
 " >> "$procdir"/"$af2dir"_af2.sh
 echo "\
 All files will be copied to box.com under $USER@nih.gov account."
