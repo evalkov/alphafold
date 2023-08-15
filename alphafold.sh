@@ -1,6 +1,6 @@
 #!/bin/bash
 
-alphafold_version='2.3.1_conda'
+alphafold_version='2.3.2_conda'
 db_version='2020-05-14'
 
 ################### DO NOT EDIT BELOW ################
@@ -16,7 +16,7 @@ fi
 
 # Checks if you are logged into the head node for the cluster
 submithost=`echo $HOSTNAME`
-if [ ! "$submithost" = "fsitgl-head01p.ncifcrf.gov" ]; then
+if [ ! "$submithost" = "fsitgl-xfer03p.ncifcrf.gov" ]; then
 	echo -e "\nYou must be logged in to FRCE cluster to use this script.\n"
 	exit
 fi
@@ -59,8 +59,8 @@ if (( "$len" <= 250 )); then
 #!/bin/bash
 #SBATCH --job-name=$af2dir
 #SBATCH --output="$af2dir".out
-#SBATCH --partition=gpu
-#SBATCH --gres=gpu:p100:1
+#SBATCH --partition=gpu-oel8
+#SBATCH --gres=gpu:2
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem-per-cpu=10G
@@ -71,7 +71,7 @@ elif (( "$len" >= 250 && "$len" <= 1500 )); then
 #!/bin/bash
 #SBATCH --job-name=$af2dir
 #SBATCH --output="$af2dir".out
-#SBATCH --partition=gpu
+#SBATCH --partition=gpu-oel8
 #SBATCH --gres=gpu:v100:2
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=16
@@ -83,7 +83,7 @@ elif (( "$len" >= 1500 )); then
 #!/bin/bash
 #SBATCH --job-name=$af2dir
 #SBATCH --output="$af2dir".out
-#SBATCH --partition=gpu
+#SBATCH --partition=gpu-oel8
 #SBATCH --gres=gpu:v100:2
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=16
@@ -96,13 +96,14 @@ echo "\
 #SBATCH --mail-user="$USER"
 
 module load alphafold/"$alphafold_version"
-module load pymol/2.3.0
+module load pymol/2.6.0
 
 run --fasta_paths="$procdir"/"$af2dir".fa \
 	--output_dir="$procdir" \
 	--db_preset=full_dbs \
-	--num_multimer_predictions_per_model=1 \
+	--num_multimer_predictions_per_model=5 \
 	--max_template_date="$db_version" \
+	--models_to_relax=best \
 	--model_preset=multimer
 
 if [ ! -e ""$procdir"/"$af2dir"/ranked_0.pdb" ]; then
