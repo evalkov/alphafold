@@ -54,7 +54,7 @@ len=`sed '/^>/d' $1 | tr -d '\n' | wc -c`
 
 
 if (( "$len" <= 250 )); then
-  echo -e "Found $len residues, setting 3h time limit."
+  echo -e "Found $len residues, setting 6h time limit."
   echo "\
 #!/bin/bash
 #SBATCH --job-name=$af2dir
@@ -64,9 +64,9 @@ if (( "$len" <= 250 )); then
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem-per-cpu=10G
-#SBATCH --time=03:00:00" > "$procdir"/"$af2dir"_af2.sh
+#SBATCH --time=06:00:00" > "$procdir"/"$af2dir"_af2.sh
 elif (( "$len" >= 250 && "$len" <= 1500 )); then
-  echo -e "Found $len residues, setting 16h time limit."
+  echo -e "Found $len residues, setting 24h time limit."
   echo "\
 #!/bin/bash
 #SBATCH --job-name=$af2dir
@@ -76,9 +76,9 @@ elif (( "$len" >= 250 && "$len" <= 1500 )); then
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem-per-cpu=10G
-#SBATCH --time=16:00:00" > "$procdir"/"$af2dir"_af2.sh
+#SBATCH --time=24:00:00" > "$procdir"/"$af2dir"_af2.sh
 elif (( "$len" >= 1500 )); then
-  echo -e "Found $len residues, setting 36h time limit."
+  echo -e "Found $len residues, setting 48h time limit."
   echo "\
 #!/bin/bash
 #SBATCH --job-name=$af2dir
@@ -88,7 +88,7 @@ elif (( "$len" >= 1500 )); then
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem-per-cpu=15G
-#SBATCH --time=36:00:00" > "$procdir"/"$af2dir"_af2.sh
+#SBATCH --time=48:00:00" > "$procdir"/"$af2dir"_af2.sh
 fi
 
 echo "\
@@ -152,14 +152,14 @@ import os
 import numpy as np
 import matplotlib as mpl
 mpl.use('Agg')
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 import argparse
 import pickle
 
 def get_pae_plddt(model_names):
     out = {}
-    for i,name in enumerate(model_names):
-        d = pickle.load(open(name,'rb'))
+    for i, name in enumerate(model_names):
+        d = pickle.load(open(name, 'rb'))
         out[f'model_{i+1}'] = {'plddt': d['plddt'], 'pae':d['predicted_aligned_error']}
     return out
 
@@ -172,7 +172,7 @@ def generate_output_images(feature_dict, out_dir, name, pae_plddt_per_model):
     final = non_gaps[seqid_sort] * seqid[seqid_sort, None]
 
     ##################################################################
-    plt.figure(figsize=(14, 4), dpi=100)
+    plt.figure(figsize=(28, 8))
     ##################################################################
     plt.subplot(1, 2, 1)
     plt.title(\"Sequence coverage\")
@@ -182,7 +182,7 @@ def generate_output_images(feature_dict, out_dir, name, pae_plddt_per_model):
     plt.plot((msa != 21).sum(0), color='black')
     plt.xlim(-0.5, msa.shape[1] - 0.5)
     plt.ylim(-0.5, msa.shape[0] - 0.5)
-    plt.colorbar(label=\"Sequence identity to query\", )
+    plt.colorbar(label=\"Sequence identity to query\")
     plt.xlabel(\"Positions\")
     plt.ylabel(\"Sequences\")
 
@@ -195,33 +195,38 @@ def generate_output_images(feature_dict, out_dir, name, pae_plddt_per_model):
     plt.ylim(0, 100)
     plt.ylabel(\"Predicted LDDT\")
     plt.xlabel(\"Positions\")
-    plt.savefig(f\"{out_dir}/{name+('_' if name else '')}coverage_LDDT.png\")
+    svg_filename = f\"{out_dir}/{name+('_' if name else '')}coverage_LDDT.svg\"
+    plt.savefig(svg_filename, dpi=600)  # Save as SVG
+    png_filename = f\"{out_dir}/{name+('_' if name else '')}coverage_LDDT.png\"
+    plt.savefig(png_filename, dpi=100)  # Save as PNG
     ##################################################################
 
     ##################################################################
     num_models = 5
-    plt.figure(figsize=(3 * num_models, 2), dpi=100)
+    plt.figure(figsize=(6 * num_models, 4))
     for n, (model_name, value) in enumerate(pae_plddt_per_model.items()):
         plt.subplot(1, num_models, n + 1)
         plt.title(model_name)
-        plt.imshow(value[\"pae\"], label=model_name, cmap=\"bwr\", vmin=0, vmax=30)
+        plt.imshow(value[\"pae\"], label=model_name, cmap=\"coolwarm\", vmin=0, vmax=30)
         plt.colorbar()
-    plt.savefig(f\"{out_dir}/{name+('_' if name else '')}PAE.png\")
+    svg_filename = f\"{out_dir}/{name+('_' if name else '')}PAE.svg\"
+    plt.savefig(svg_filename, dpi=600)  # Save as SVG
+    png_filename = f\"{out_dir}/{name+('_' if name else '')}PAE.png\"
+    plt.savefig(png_filename, dpi=100)  # Save as PNG
     ##################################################################
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--input_dir',dest='input_dir',required=True)
-parser.add_argument('--name',dest='name')
+parser.add_argument('--input_dir', dest='input_dir', required=True)
+parser.add_argument('--name', dest='name')
 parser.set_defaults(name='')
-parser.add_argument('--output_dir',dest='output_dir')
+parser.add_argument('--output_dir', dest='output_dir')
 parser.set_defaults(output_dir='')
 args = parser.parse_args()
 
-# print(os.listdir(args.input_dir))
-feature_dict = pickle.load(open(f'{args.input_dir}/features.pkl','rb'))
+feature_dict = pickle.load(open(f'{args.input_dir}/features.pkl', 'rb'))
 is_multimer = ('result_model_1_multimer.pkl' in [os.path.basename(f) for f in os.listdir(path=args.input_dir)])
 is_ptm = ('result_model_1_ptm.pkl' in [os.path.basename(f) for f in os.listdir(path=args.input_dir)])
-model_names = [f'{args.input_dir}/result_model_{f}{\"_multimer\" if is_multimer else \"_ptm\" if is_ptm else \"\"}.pkl' for f in range(1,6)]
+model_names = [f'{args.input_dir}/result_model_{f}{\"_multimer\" if is_multimer else \"_ptm\" if is_ptm else \"\"}.pkl' for f in range(1, 6)]
 
 pae_plddt_per_model = get_pae_plddt(model_names)
 generate_output_images(feature_dict, args.output_dir if args.output_dir else args.input_dir, args.name, pae_plddt_per_model)
