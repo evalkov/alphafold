@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 alphafold_version='2.3.2_conda'
 db_version='2020-05-14'
 
@@ -16,7 +18,7 @@ fi
 
 # Checks if you are logged into the head node for the cluster
 submithost=`echo $HOSTNAME`
-if [ ! "$submithost" = "fsitgl-xfer03p.ncifcrf.gov" ]; then
+if [ ! "$submithost" = "fsitgl-head01p.ncifcrf.gov" ]; then
 	echo -e "\nYou must be logged in to FRCE cluster to use this script.\n"
 	exit
 fi
@@ -28,16 +30,45 @@ Script to submit AlphaFold2 jobs to the FRCE cluster.
 AlphaFold version: $alphafold_version                        
 Template release date cutoff: $db_version
 
-Usage: alphafold fastafile.fa\n"
+Usage: alphafold fastafile.fa (add -quick or -thorough flags to generate 5 or 25 predictions)\n"
 
-if [ ! "$1" = "" ]; then
-	seqfile="$1"
+# Initialize flag variables
+quick_flag=false
+thorough_flag=false
+
+# Process command-line arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -quick)
+            quick_flag=true
+            shift
+            ;;
+        -thorough)
+            thorough_flag=true
+            shift
+            ;;
+        *)
+            # Treat any other argument as a file to be read
+            if [ -f "$1" ]; then
+                echo "Reading file: $1"
+                seqfile="$1"
+            else
+                echo -e "Fasta sequence not provided!\n"
+                exit
+            fi
+            shift
+            ;;
+    esac
+done
+
+
+if [ "$seqfile" ]; then
 	af2dir=`echo $seqfile | sed 's|.*/||' | sed 's/\.[^.]*$//'`
 	cp $seqfile "$procdir""$af2dir".fa
 	num_seqs=`grep '^>' $seqfile | wc -l`
 	chain_names=`grep '^>' $seqfile`
 	if [ ! "$chain_names" ]; then
-                echo -e "$seqfile is not in fasta format:"
+        	echo -e "$seqfile is not in fasta format:"
 		cat $seqfile
                 exit
         else
@@ -45,67 +76,118 @@ if [ ! "$1" = "" ]; then
 Found $num_seqs protein chains:
 $chain_names"
 	fi
-elif [ "$1" = "" ]; then
+else
 	echo -e "Fasta sequence not provided!\n"
-	exit
+        exit
 fi
 
-len=`sed '/^>/d' $1 | tr -d '\n' | wc -c`
+len=`sed '/^>/d' $seqfile | tr -d '\n' | wc -c`
 
+# Checks if the sequence contains only single-letter amino acid codes
 
-if (( "$len" <= 250 )); then
-  echo -e "Found $len residues, setting 6h time limit."
-  echo "\
-#!/bin/bash
-#SBATCH --job-name=$af2dir
-#SBATCH --output="$af2dir".out
-#SBATCH --partition=gpu-oel8
-#SBATCH --gres=gpu:2
-#SBATCH --nodes=1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem-per-cpu=10G
-#SBATCH --time=06:00:00" > "$procdir"/"$af2dir"_af2.sh
-elif (( "$len" >= 250 && "$len" <= 1500 )); then
-  echo -e "Found $len residues, setting 24h time limit."
-  echo "\
-#!/bin/bash
-#SBATCH --job-name=$af2dir
-#SBATCH --output="$af2dir".out
-#SBATCH --partition=gpu-oel8
-#SBATCH --gres=gpu:v100:2
-#SBATCH --nodes=1
-#SBATCH --cpus-per-task=16
-#SBATCH --mem-per-cpu=10G
-#SBATCH --time=24:00:00" > "$procdir"/"$af2dir"_af2.sh
-elif (( "$len" >= 1500 )); then
-  echo -e "Found $len residues, setting 48h time limit."
-  echo "\
-#!/bin/bash
-#SBATCH --job-name=$af2dir
-#SBATCH --output="$af2dir".out
-#SBATCH --partition=gpu-oel8
-#SBATCH --gres=gpu:v100:2
-#SBATCH --nodes=1
-#SBATCH --cpus-per-task=16
-#SBATCH --mem-per-cpu=15G
-#SBATCH --time=48:00:00" > "$procdir"/"$af2dir"_af2.sh
+valid_codes="GPVALIMCFYWHKRNQEDST"
+found_error=0
+
+if [ ! "$seqfile" = "" ]; then
+awk -v valid="$valid_codes" '/^>/ {next} {
+  gsub(/[^[:alnum:]]/, "")
+  for (i = 1; i <= length; i++) {
+    char = substr($0, i, 1)
+    if (index(valid, char) == 0) {
+      print "Non-amino acid letter in line:", NR, "Character:", char
+      found_error=1
+      exit 1
+    }
+  }
+}
+
+END {
+  if (found_error == 0) {
+    print "The file contains only valid amino acid codes."
+  }
+}' "$seqfile"
 fi
 
 echo "\
+#!/bin/bash
+#SBATCH --job-name=$af2dir
+#SBATCH --output="$af2dir".out
+#SBATCH --partition=gpu-oel8
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user="$USER"
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem-per-cpu=15G" > "$procdir"/"$af2dir"_af2.sh
 
+if (( "$len" <= 249 )); then
+  echo -e "Found $len residues, setting 6h time limit."
+  echo "\
+#SBATCH --gres=gpu:2
+#SBATCH --time=06:00:00
+" >> "$procdir"/"$af2dir"_af2.sh
+elif (( "$len" >= 250 && "$len" <= 999 )); then
+  echo -e "Found $len residues, setting 24h time limit."
+  echo "\
+#SBATCH --gres=gpu:v100:2
+#SBATCH --time=24:00:00
+" >> "$procdir"/"$af2dir"_af2.sh
+elif (( "$len" >= 1000 && "$len" <= 1299 )); then
+  echo -e "Found $len residues, setting 36h time limit."
+  echo "\
+#SBATCH --gres=gpu:v100:2
+#SBATCH --time=48:00:00
+" >> "$procdir"/"$af2dir"_af2.sh
+elif (( "$len" >= 1300 && "$len" <= 2499 )); then
+  echo -e "Found $len residues, setting 48h time limit."
+  echo "\
+#SBATCH --gres=gpu:v100:2
+#SBATCH --time=2-00:00:00
+" >> "$procdir"/"$af2dir"_af2.sh
+elif (( "$len" >= 2500 )); then
+  echo -e "Found $len residues, setting 72h time limit."
+  echo -e "The GPU is set to offload memory."
+  echo -e "Only 5 models will be predicted." 
+  echo "\
+#SBATCH --gres=gpu:v100:2
+#SBATCH --time=3-00:00:00
+
+export TF_FORCE_UNIFIED_MEMORY=1
+export XLA_PYTHON_CLIENT_MEM_FRACTION=\"4.0\"
+" >> "$procdir"/"$af2dir"_af2.sh 
+fi
+
+echo "\
 module load alphafold/"$alphafold_version"
 module load pymol/2.6.0
 
-run --fasta_paths="$procdir"/"$af2dir".fa \
-	--output_dir="$procdir" \
-	--db_preset=full_dbs \
-	--num_multimer_predictions_per_model=5 \
-	--max_template_date="$db_version" \
-	--models_to_relax=best \
-	--model_preset=multimer
+run --fasta_paths="$procdir"/"$af2dir".fa \\
+--output_dir="$procdir" \\
+--db_preset=full_dbs \\
+--max_template_date="$db_version" \\
+--models_to_relax=best \\
+--model_preset=multimer \\" >> "$procdir"/"$af2dir"_af2.sh
 
+
+# Checking flags to set number of predictions per model
+if [ "$quick_flag" = true ]; then
+        echo -e "The -quick flag is recognized."
+        echo -e "Setting multimer predictions per model to 1."
+        num_pred_per_model=1
+elif [ "$thorough_flag" = true ]; then
+        echo -e "The -thorough flag is recognized."
+        echo -e "Setting multimer predictions per model to 5."
+        num_pred_per_model=5
+else
+	if (( "$len" <= 2499 )); then
+		num_pred_per_model=5
+	elif (( "$len" >= 2500 )); then
+		num_pred_per_model=1
+	fi
+fi
+
+echo  "--num_multimer_predictions_per_model=$num_pred_per_model" >> "$procdir"/"$af2dir"_af2.sh
+
+echo "\
 if [ ! -e ""$procdir"/"$af2dir"/ranked_0.pdb" ]; then
 	tail -50 "$af2dir".out | mutt -s \"$af2dir\" -e 'my_hdr From:AlphaFold2 (AlphaFold2)' -b valkove2@nih.gov -- "$USER"@nih.gov
 	exit
