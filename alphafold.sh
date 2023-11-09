@@ -112,7 +112,7 @@ echo "\
 #!/bin/bash
 #SBATCH --job-name=$af2dir
 #SBATCH --output="$af2dir".out
-#SBATCH --partition=gpu-oel8
+#SBATCH --partition=gpu
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user="$USER"
 #SBATCH --nodes=1
