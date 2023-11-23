@@ -315,17 +315,11 @@ generate_output_images(feature_dict, args.output_dir if args.output_dir else arg
 " > "$procdir"/"$af2dir"_vis.py
 
 echo "\
-<img src=\"cid:animated.gif\" />
-" > "$procdir"/"$af2dir"_mail.htm
-
-echo "\
 cp "$procdir"/"$af2dir"_vis.py "$procdir"/"$af2dir"/
-cp "$procdir"/"$af2dir"_mail.htm "$procdir"/"$af2dir"/
 python3 "$procdir"/"$af2dir"/"$af2dir"_vis.py --input_dir "$procdir"/"$af2dir"/ --name "$af2dir"
-tar -C "$procdir"/"$af2dir"/ -czvf "$procdir"/"$af2dir"/"$af2dir"_top_ranked.tar.gz ranked_0.pdb ranked_1.pdb ranked_2.pdb ranked_3.pdb ranked_4.pdb
-mutt -e 'set content_type=text/html' -s \"$af2dir\" -a "$procdir"/"$af2dir"/"$af2dir"_top_ranked.tar.gz -a "$procdir"/"$af2dir"/*.png -a "$procdir""$af2dir"/animated.gif -e 'my_hdr From:AlphaFold2 (AlphaFold2)' -b valkove2@nih.gov -- "$USER"@nih.gov < "$procdir"/"$af2dir"/"$af2dir"_mail.htm
-rm "$procdir"/"$af2dir"/"$af2dir"_top_ranked.tar.gz
-rm "$procdir"/"$af2dir"_mail.htm
+tar -C "$procdir"/"$af2dir"/ -cvjf "$procdir"/"$af2dir"/"$af2dir"_top_ranked.tar.bz2 ranked_0.pdb ranked_1.pdb ranked_2.pdb ranked_3.pdb ranked_4.pdb 
+echo -e \"<img src=\"cid:animated.gif\" />\" | mutt -e 'set content_type=text/html' -s \"$af2dir\" -a "$procdir"/"$af2dir"/"$af2dir"_top_ranked.tar.bz2 -a "$procdir"/"$af2dir"/*.png -a "$procdir""$af2dir"/animated.gif -e 'my_hdr From:AlphaFold2 (AlphaFold2)' -b eugene.valkov@gmail.com -- "$USER"@nih.gov
+rm "$procdir"/"$af2dir"/"$af2dir"_top_ranked.tar.bz2
 rm "$procdir"/"$af2dir"_vis.py
 rm "$procdir"/"$af2dir"_pymol.pml
 rm "$procdir"/"$af2dir"/result_model_1.pkl
