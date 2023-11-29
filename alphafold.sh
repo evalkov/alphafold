@@ -1,20 +1,97 @@
 #!/bin/bash
-
 set -e
 
 alphafold_version='2.3.2_conda'
 db_version='2020-05-14'
 
-################### DO NOT EDIT BELOW ################
+echo "\
+---------------------------------------------------------
+AlphaFold2-Multimer pipeline for a SLURM compute cluster.
+---------------------------------------------------------
+Author: Eugene Valkov, NCI/NIH.
+AlphaFold2 version: $alphafold_version                        
+Template release date cutoff: $db_version
+---------------------------------------------------------
+"
 
-mkdir -p "/scratch/cluster_scratch/$USER/alphafold"
-procdir="/scratch/cluster_scratch/$USER/alphafold/"
+# Check if the 'sbatch' command is available and get its version
+check_slurm=$(sbatch -V 2>/dev/null)
 
-if [[ -r /mnt/projects/RNABL-GRID-SPE/active/Valkov/alphafold/ ]]; then
-	storage_dir="/mnt/projects/RNABL-GRID-SPE/active/Valkov/alphafold/"
+if [ -z "$check_slurm" ]; then
+    echo -e "This pipeline requires access to a SLURM-enabled compute environment."
+    exit 1
 else
-	storage_dir="$procdir"
+    echo -e "SLURM is available. Version: $check_slurm"
 fi
+
+
+function show_help() {
+	echo ""
+  	echo "Usage: $0 [options]"
+  	echo ""
+  	echo "Options:"
+  	echo "  -d DIRECTORY   Specify the directory path. (Required)"
+  	echo "  -f FILE        Specify the sequence file path. (Required)"
+	echo "  -m MODE        Specify 'quick' or 'thorough'. ([1] or 5 predictions/model)."
+  	echo "  -h             Show help information."
+}
+
+directory=""
+seqfile=""
+mode="quick"
+num_pred_per_model=1
+
+while getopts "hd:f:m:" opt; do
+  case $opt in
+    h) show_help
+       exit 0
+    ;;
+    d) directory="$OPTARG"
+    ;;
+    f) seqfile="$OPTARG"
+    ;;
+    m) if [[ "$OPTARG" == "quick" ]]; then
+	 mode="$OPTARG"
+         num_pred_per_model=1
+       elif [[ "$OPTARG" == "thorough" ]]; then
+         mode="$OPTARG"
+         num_pred_per_model=5
+       else
+         echo "Invalid mode. Choose 'quick' or 'thorough'."
+         exit 1
+       fi
+    ;;
+    \?) echo "Invalid option -$OPTARG" >&2
+       exit 1
+    ;;
+  esac
+done
+
+# Check if both -d and -f options were provided
+if [ -z "$directory" ] || [ -z "$seqfile" ]; then
+  echo -e "Both -d (directory) and -f (file) options must be provided."
+  show_help
+  exit 1
+fi
+
+# Check if the directory exists, is a directory, and is writable
+if [ ! -d "$directory" ] || [ ! -w "$directory" ]; then
+	echo "The specified directory does not exist, is not a directory, or is not writable: $directory"
+	exit 1
+else
+	mkdir -p ""$directory"$USER/"
+        procdir=""$directory"$USER/"
+fi
+
+# Check if the file exists and is a file
+if [ ! -f "$seqfile" ]; then
+  echo "The specified file does not exist or is not a file: $seqfile"
+  exit 1
+fi
+
+echo "Directory for output: $procdir"
+echo "File provided is: $seqfile"
+echo "$num_pred_per_model predictions/model will be generated."
 
 # Checks if you are logged into the head node for the cluster
 submithost=`echo $HOSTNAME`
@@ -22,44 +99,6 @@ if [ ! "$submithost" = "fsitgl-head01p.ncifcrf.gov" ]; then
 	echo -e "\nYou must be logged in to FRCE cluster to use this script.\n"
 	exit
 fi
-
-echo -e "\
-
-Script to submit AlphaFold2 jobs to the FRCE cluster.
-(C) Eugene Valkov, National Cancer Institute, U.S.A.
-AlphaFold version: $alphafold_version                        
-Template release date cutoff: $db_version
-
-Usage: alphafold fastafile.fa (add -quick or -thorough flags to generate 5 or 25 predictions)\n"
-
-# Initialize flag variables
-quick_flag=false
-thorough_flag=false
-
-# Process command-line arguments
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        -quick)
-            quick_flag=true
-            shift
-            ;;
-        -thorough)
-            thorough_flag=true
-            shift
-            ;;
-        *)
-            # Treat any other argument as a file to be read
-            if [ -f "$1" ]; then
-                echo "Reading file: $1"
-                seqfile="$1"
-            else
-                echo -e "Fasta sequence not provided!\n"
-                exit
-            fi
-            shift
-            ;;
-    esac
-done
 
 
 if [ "$seqfile" ]; then
@@ -105,260 +144,251 @@ END {
   if (found_error == 0) {
     print "The file contains only valid amino acid codes."
   }
-}' "$seqfile"
+}' $seqfile
 fi
+
 
 echo "\
 #!/bin/bash
 #SBATCH --job-name=$af2dir
-#SBATCH --output="$af2dir".out
+#SBATCH --output=$af2dir.out
 #SBATCH --partition=gpu
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user="$USER"
+#SBATCH --mail-user=$USER
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=16
-#SBATCH --mem-per-cpu=15G" > "$procdir"/"$af2dir"_af2.sh
+#SBATCH --mem-per-cpu=15G" > $procdir"$af2dir"_af2.sh
 
 if (( "$len" <= 249 )); then
   echo -e "Found $len residues, setting 6h time limit."
   echo "\
 #SBATCH --gres=gpu:2
 #SBATCH --time=06:00:00
-" >> "$procdir"/"$af2dir"_af2.sh
+" >> $procdir"$af2dir"_af2.sh
 elif (( "$len" >= 250 && "$len" <= 999 )); then
   echo -e "Found $len residues, setting 24h time limit."
   echo "\
 #SBATCH --gres=gpu:v100:2
 #SBATCH --time=24:00:00
-" >> "$procdir"/"$af2dir"_af2.sh
+" >> $procdir"$af2dir"_af2.sh
 elif (( "$len" >= 1000 && "$len" <= 1299 )); then
   echo -e "Found $len residues, setting 36h time limit."
   echo "\
 #SBATCH --gres=gpu:v100:2
 #SBATCH --time=48:00:00
-" >> "$procdir"/"$af2dir"_af2.sh
+" >> $procdir"$af2dir"_af2.sh
 elif (( "$len" >= 1300 && "$len" <= 2499 )); then
   echo -e "Found $len residues, setting 48h time limit."
   echo "\
 #SBATCH --gres=gpu:v100:2
 #SBATCH --time=2-00:00:00
-" >> "$procdir"/"$af2dir"_af2.sh
+" >> $procdir"$af2dir"_af2.sh
 elif (( "$len" >= 2500 )); then
+  num_pred_per_model=1
+  echo -e "Large prediction so will run in 'quick' mode only."
   echo -e "Found $len residues, setting 72h time limit."
   echo -e "The GPU is set to offload memory."
-  echo -e "Only 5 models will be predicted." 
+  echo -e "Only $num_pred_per_model prediction/model will be generated." 
   echo "\
 #SBATCH --gres=gpu:v100:2
 #SBATCH --time=3-00:00:00
 
 export TF_FORCE_UNIFIED_MEMORY=1
 export XLA_PYTHON_CLIENT_MEM_FRACTION=\"4.0\"
-" >> "$procdir"/"$af2dir"_af2.sh 
+" >> $procdir"$af2dir"_af2.sh 
 fi
 
 echo "\
-module load alphafold/"$alphafold_version"
-module load pymol/2.6.0
+module load alphafold/$alphafold_version
 
-run --fasta_paths="$procdir"/"$af2dir".fa \\
---output_dir="$procdir" \\
+run --fasta_paths=$procdir$af2dir.fa \\
+--output_dir=$procdir \\
 --db_preset=full_dbs \\
---max_template_date="$db_version" \\
+--max_template_date=$db_version \\
 --models_to_relax=best \\
---model_preset=multimer \\" >> "$procdir"/"$af2dir"_af2.sh
+--model_preset=multimer \\" >> $procdir"$af2dir"_af2.sh
 
-
-# Checking flags to set number of predictions per model
-if [ "$quick_flag" = true ]; then
-        echo -e "The -quick flag is recognized."
-        echo -e "Setting multimer predictions per model to 1."
-        num_pred_per_model=1
-elif [ "$thorough_flag" = true ]; then
-        echo -e "The -thorough flag is recognized."
-        echo -e "Setting multimer predictions per model to 5."
-        num_pred_per_model=5
-else
-	if (( "$len" <= 2499 )); then
-		num_pred_per_model=5
-	elif (( "$len" >= 2500 )); then
-		num_pred_per_model=1
-	fi
-fi
-
-echo  "--num_multimer_predictions_per_model=$num_pred_per_model" >> "$procdir"/"$af2dir"_af2.sh
+echo "--num_multimer_predictions_per_model=$num_pred_per_model
+" >> $procdir"$af2dir"_af2.sh
 
 echo "\
-if [ ! -e ""$procdir"/"$af2dir"/ranked_0.pdb" ]; then
-	tail -50 "$af2dir".out | mutt -s \"$af2dir\" -e 'my_hdr From:AlphaFold2 (AlphaFold2)' -b valkove2@nih.gov -- "$USER"@nih.gov
+if [ ! -e "$procdir$af2dir/ranked_0.pdb" ]; then
+	# workaround with libcrypto not accessing the correct openssl 
+	export LD_LIBRARY_PATH=/lib64:\$LD_LIBRARY_PATH
+	tail -50 $af2dir.out | mutt -s \"$af2dir\" -e 'my_hdr From:AlphaFold2 (AlphaFold2)' -- $USER@nih.gov
 	exit
 fi
-" >> "$procdir"/"$af2dir"_af2.sh
+" >> $procdir"$af2dir"_af2.sh
+
 
 echo "\
-ln -s "$procdir"/"$af2dir"/result_model_1_*_0.pkl "$procdir"/"$af2dir"/result_model_1.pkl
-ln -s "$procdir"/"$af2dir"/result_model_2_*_0.pkl "$procdir"/"$af2dir"/result_model_2.pkl
-ln -s "$procdir"/"$af2dir"/result_model_3_*_0.pkl "$procdir"/"$af2dir"/result_model_3.pkl
-ln -s "$procdir"/"$af2dir"/result_model_4_*_0.pkl "$procdir"/"$af2dir"/result_model_4.pkl
-ln -s "$procdir"/"$af2dir"/result_model_5_*_0.pkl "$procdir"/"$af2dir"/result_model_5.pkl
-mv "$procdir"/"$af2dir".fa "$procdir"/"$af2dir"/
-cp "$af2dir".out "$procdir"/"$af2dir"/
-mv "$procdir"/"$af2dir"_af2.sh "$procdir"/"$af2dir"/
-" >> "$procdir"/"$af2dir"_af2.sh
+set bgcolor white
+open $procdir$af2dir/ranked_0.pdb
+cartoon style protein modeh tube rad 2 sides 24
+cartoon style width 2 thick 0.2
+rainbow chain palette RdYlBu-5
+lighting simple shadows false intensity 0.5
+show #1 cartoons
+view all
+hide atoms
+movie record size 1500,1500 format png supersample 4 directory $procdir$af2dir
+show #1 models
+turn y 6 360 models #1
+wait 60
+stop
+movie stop
+" > $procdir"$af2dir"_chimera_movie.cxc
 
 echo "\
-load "$procdir"/"$af2dir"/ranked_0.pdb
-show cartoon
-set cartoon_cylindrical_helices, 1
-spectrum chain
-set antialias, 1
-orient
-zoom complete=1
-clip slab, 500
-set ray_shadows, 0
-viewport 1000,1000
-set ray_trace_mode, 0
-mset 1 x60
-movie.nutate(1,60,angle=120)
-mpng "$procdir"/"$af2dir"/test.png
-" > "$procdir"/"$af2dir"_pymol.pml
+module load ChimeraX/1.5
+ChimeraX --offscreen --script $procdir"$af2dir"_chimera_movie.cxc --exit
+convert -dispose previous -delay 10 -loop 0 -dither None -colors 256 -layers Optimize -resize 500x500 -filter Lanczos -coalesce $procdir$af2dir/chimovie*.png $procdir$af2dir/animated.gif
+rm $procdir$af2dir/chimovie*.png
+" >> $procdir"$af2dir"_af2.sh
+
 
 echo "\
-cp "$procdir"/"$af2dir"_pymol.pml "$procdir"/"$af2dir"/
-pymol -qc "$procdir"/"$af2dir"/"$af2dir"_pymol.pml
-convert -dispose previous -delay 10 -loop 0 "$procdir"/"$af2dir"/test*.png -coalesce -scale 800x800 "$procdir"/"$af2dir"/animated.gif
-rm "$procdir"/"$af2dir"/test*.png
-" >> "$procdir"/"$af2dir"_af2.sh
+set bgcolor white
+open $procdir$af2dir/ranked*.pdb
+cartoon style protein modeh tube rad 2 sides 24
+cartoon style width 2 thick 0.2
+rainbow chain palette RdYlBu-5
+lighting simple shadows false intensity 0.5
+view all
+hide atoms
+show cartoons
+alphafold pae #1 file $procdir$af2dir/pae_model_1_multimer_v3_pred_0.json palette paegreen plot false
+hide all models
+show #1 models
+" > $procdir"$af2dir"_chimera_align.cxc
+
 
 echo "\
-import os
-import numpy as np
-import matplotlib as mpl
-mpl.use('Agg')
-import matplotlib.pyplot as plt
-import argparse
-import pickle
+# Initialize variables to track the chain with the most atoms
+max_atoms=0
+max_chain=\"\"
 
-def get_pae_plddt(model_names):
-    out = {}
-    for i, name in enumerate(model_names):
-        d = pickle.load(open(name, 'rb'))
-        out[f'model_{i+1}'] = {'plddt': d['plddt'], 'pae':d['predicted_aligned_error']}
-    return out
+# Process the PDB file and store the result in a variable
+readarray -t lines < <(grep '^ATOM' $procdir$af2dir/ranked_0.pdb | cut -c 22 | sort | uniq -c | sort -nr)
 
-def generate_output_images(feature_dict, out_dir, name, pae_plddt_per_model):
-    msa = feature_dict['msa']
-    seqid = (np.array(msa[0] == msa).mean(-1))
-    seqid_sort = seqid.argsort()
-    non_gaps = (msa != 21).astype(float)
-    non_gaps[non_gaps == 0] = np.nan
-    final = non_gaps[seqid_sort] * seqid[seqid_sort, None]
+# Iterate over the lines
+for line in \"\${lines[@]}\"; do
+    read -r atoms chain <<< \"\$line\"
+    if (( atoms > max_atoms )); then
+        max_atoms=\$atoms
+        max_chain=\$chain
+    fi
+done
 
-    ##################################################################
-    plt.figure(figsize=(28, 8))
-    ##################################################################
-    plt.subplot(1, 2, 1)
-    plt.title(\"Sequence coverage\")
-    plt.imshow(final,
-               interpolation='nearest', aspect='auto',
-               cmap=\"rainbow_r\", vmin=0, vmax=1, origin='lower')
-    plt.plot((msa != 21).sum(0), color='black')
-    plt.xlim(-0.5, msa.shape[1] - 0.5)
-    plt.ylim(-0.5, msa.shape[0] - 0.5)
-    plt.colorbar(label=\"Sequence identity to query\")
-    plt.xlabel(\"Positions\")
-    plt.ylabel(\"Sequences\")
+echo \"\
+matchmaker all to #1/\$max_chain pairing bs
+save $procdir"$af2dir"_chimera_align.cxs
+\" >> $procdir"$af2dir"_chimera_align.cxc
+ChimeraX --offscreen --script $procdir"$af2dir"_chimera_align.cxc --exit
+" >> $procdir"$af2dir"_af2.sh
 
-    ##################################################################
-    plt.subplot(1, 2, 2)
-    plt.title(\"Predicted LDDT per position\")
-    for model_name, value in pae_plddt_per_model.items():
-        plt.plot(value[\"plddt\"], label=model_name)
-    plt.legend()
-    plt.ylim(0, 100)
-    plt.ylabel(\"Predicted LDDT\")
-    plt.xlabel(\"Positions\")
-    svg_filename = f\"{out_dir}/{name+('_' if name else '')}coverage_LDDT.svg\"
-    plt.savefig(svg_filename, dpi=600)  # Save as SVG
-    png_filename = f\"{out_dir}/{name+('_' if name else '')}coverage_LDDT.png\"
-    plt.savefig(png_filename, dpi=100)  # Save as PNG
-    ##################################################################
-
-    ##################################################################
-    num_models = 5
-    plt.figure(figsize=(6 * num_models, 4))
-    for n, (model_name, value) in enumerate(pae_plddt_per_model.items()):
-        plt.subplot(1, num_models, n + 1)
-        plt.title(model_name)
-        plt.imshow(value[\"pae\"], label=model_name, cmap=\"coolwarm\", vmin=0, vmax=30)
-        plt.colorbar()
-    svg_filename = f\"{out_dir}/{name+('_' if name else '')}PAE.svg\"
-    plt.savefig(svg_filename, dpi=600)  # Save as SVG
-    png_filename = f\"{out_dir}/{name+('_' if name else '')}PAE.png\"
-    plt.savefig(png_filename, dpi=100)  # Save as PNG
-    ##################################################################
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--input_dir', dest='input_dir', required=True)
-parser.add_argument('--name', dest='name')
-parser.set_defaults(name='')
-parser.add_argument('--output_dir', dest='output_dir')
-parser.set_defaults(output_dir='')
-args = parser.parse_args()
-
-feature_dict = pickle.load(open(f'{args.input_dir}/features.pkl', 'rb'))
-is_multimer = ('result_model_1_multimer.pkl' in [os.path.basename(f) for f in os.listdir(path=args.input_dir)])
-is_ptm = ('result_model_1_ptm.pkl' in [os.path.basename(f) for f in os.listdir(path=args.input_dir)])
-model_names = [f'{args.input_dir}/result_model_{f}{\"_multimer\" if is_multimer else \"_ptm\" if is_ptm else \"\"}.pkl' for f in range(1, 6)]
-
-pae_plddt_per_model = get_pae_plddt(model_names)
-generate_output_images(feature_dict, args.output_dir if args.output_dir else args.input_dir, args.name, pae_plddt_per_model)
-" > "$procdir"/"$af2dir"_vis.py
 
 echo "\
-cp "$procdir"/"$af2dir"_vis.py "$procdir"/"$af2dir"/
-python3 "$procdir"/"$af2dir"/"$af2dir"_vis.py --input_dir "$procdir"/"$af2dir"/ --name "$af2dir"
-tar -C "$procdir"/"$af2dir"/ -cvjf "$procdir"/"$af2dir"/"$af2dir"_top_ranked.tar.bz2 ranked_0.pdb ranked_1.pdb ranked_2.pdb ranked_3.pdb ranked_4.pdb 
-echo -e \"<img src=\"cid:animated.gif\" />\" | mutt -e 'set content_type=text/html' -s \"$af2dir\" -a "$procdir"/"$af2dir"/"$af2dir"_top_ranked.tar.bz2 -a "$procdir"/"$af2dir"/*.png -a "$procdir""$af2dir"/animated.gif -e 'my_hdr From:AlphaFold2 (AlphaFold2)' -b eugene.valkov@gmail.com -- "$USER"@nih.gov
-rm "$procdir"/"$af2dir"/"$af2dir"_top_ranked.tar.bz2
-rm "$procdir"/"$af2dir"_vis.py
-rm "$procdir"/"$af2dir"_pymol.pml
-rm "$procdir"/"$af2dir"/result_model_1.pkl
-rm "$procdir"/"$af2dir"/result_model_2.pkl
-rm "$procdir"/"$af2dir"/result_model_3.pkl
-rm "$procdir"/"$af2dir"/result_model_4.pkl
-rm "$procdir"/"$af2dir"/result_model_5.pkl
-" >> "$procdir"/"$af2dir"_af2.sh
+set bgcolor white
+open $procdir$af2dir/ranked_0.pdb
+cartoon style protein modeh tube rad 2 sides 24
+cartoon style width 2 thick 0.2
+rainbow chain palette RdYlBu-5
+lighting simple shadows false intensity 0.5
+show #1 cartoons
+view all
+hide atoms
+hide #1 models
+" > $procdir"$af2dir"_chimera_pae.cxc
+
 
 echo "\
+# Initialize an empty array
+chains=()
+# Extract chain identifiers and store in an array
+while IFS= read -r line; do
+	chains+=(\"\$line\")
+done < <(grep '^ATOM' $procdir$af2dir/ranked_0.pdb | cut -c 22 | sort -u)
 
-Top-scoring predictions will be emailed to $USER@nih.gov."
+# Print the array in the desired format
+count=1
+# Loop through the list
+for (( i=0; i<\${#chains[@]}; i++ )); do
+	for (( j=i+1; j<\${#chains[@]}; j++ )); do
+		count=\$((count + 1))
+		echo \"\
+combine #1 modelId #\$count name 'interface chains \${chains[i]} to \${chains[j]}'
+sel #\$count/\${chains[i]},\${chains[j]}
+select ~sel & ##selected
+alphafold pae #\$count file $procdir$af2dir/pae_model_1_multimer_v3_pred_0.json plot false
+alphafold contacts #\$count/\${chains[i]} to #\$count/\${chains[j]} distance 8 palette paecontacts range 0,30 radius 0.05 dashes 1
+del sel
+save $procdir"$af2dir"_chimera_pae.cxs
+\" >> $procdir"$af2dir"_chimera_pae.cxc
+	done
+done
+ChimeraX --offscreen --script $procdir"$af2dir"_chimera_pae.cxc --exit
+" >> $procdir"$af2dir"_af2.sh
 
 
-if [ -e "$HOME"/.boxpassword ]; then
-	username=`echo "$USER"@nih.gov`
-	password=`awk '{print $1}' $HOME/.boxpassword`
+echo "\
+mv $procdir"$af2dir"*.cxs $procdir"$af2dir"/
+mv $procdir"$af2dir"_af2.sh $procdir"$af2dir"/
+mv $procdir"$af2dir".fa $procdir"$af2dir"/
+
+export_dir=\""$af2dir"_$(date +"%Y%m%d_%H%M%S")\"
+mkdir $procdir\$export_dir
+cp $procdir$af2dir/ranked*.pdb $procdir\$export_dir
+cp $procdir$af2dir/pae_model_1_multimer_v3_pred_0.json $procdir\$export_dir
+" >> $procdir"$af2dir"_af2.sh
+
+
+echo "\
+sed -e 's|$procdir$af2dir/||g' \\
+    -e '/save /d' \\
+    -e 's/ plot false//' \\
+    $procdir"$af2dir"_chimera_align.cxc > $procdir\$export_dir/"$af2dir"_chimera_align.cxc
+
+sed -e 's|$procdir$af2dir/||g' \\
+    -e '/save /d' \\
+    -e 's/ plot false//' \\
+    $procdir"$af2dir"_chimera_pae.cxc > $procdir\$export_dir/"$af2dir"_chimera_pae.cxc
+
+tar cjf $procdir"$af2dir".tar.bz2 -C $procdir \$export_dir
+mv $procdir"$af2dir"*.cxc $procdir"$af2dir"/
+" >> $procdir"$af2dir"_af2.sh
+
+echo "\
+maxsize=\$((7*1024*1024)) # 7 MB in bytes
+size1=\$(stat -c%s \"$procdir"$af2dir".tar.bz2\")
+size2=\$(stat -c%s \"$procdir$af2dir/animated.gif\")
+totalsize=\$((size1 + size2))
+
+# workaround with libcrypto not accessing the correct openssl 
+export LD_LIBRARY_PATH=/lib64:\$LD_LIBRARY_PATH
+
+if [ \$totalsize -lt \$maxsize ]; then
+	echo -e \"<img src=\"cid:animated.gif\" />\" | mutt -e 'set content_type=text/html' -s \"$af2dir\" -a $procdir$af2dir/animated.gif -a $procdir"$af2dir".tar.bz2 -e 'my_hdr From:AlphaFold2 (AlphaFold2)' -- $USER@nih.gov
+else
+	echo -e \"<img src=\"cid:animated.gif\" />\" | mutt -e 'set content_type=text/html' -s \"$af2dir\" -a $procdir$af2dir/animated.gif -e 'my_hdr From:AlphaFold2 (AlphaFold2)' -- $USER@nih.gov
+fi
+rm $procdir"$af2dir".tar.bz2
+rm -rf $procdir\$export_dir
+" >> $procdir"$af2dir"_af2.sh
+
+if [ -e $HOME/.netrc ]; then
 	echo "\
-set ftp:ssl-force true; 
-set mirror:parallel-directories true;
-connect ftp://ftp.box.com;
-user '$username' '$password';
-cd Alphafold;
-mirror -R --no-symlinks "$procdir"/"$af2dir";
-bye" > $HOME/."$af2dir".lftpconfig
-	chmod 600 $HOME/."$af2dir".lftpconfig
-        echo "\
-lftp -f $HOME/."$af2dir".lftpconfig
-rm $HOME/."$af2dir".lftpconfig
-" >> "$procdir"/"$af2dir"_af2.sh
-echo "\
-All files will be copied to box.com under $USER@nih.gov account."
+# Start lftp session
+lftp ftp.box.com << EOF
+cd Alphafold
+mirror -R --no-symlinks $procdir$af2dir
+bye
+EOF
+" >> $procdir"$af2dir"_af2.sh
 	else
         echo "\
-rsync -vagu "$procdir"/"$af2dir" "$storage_dir"
-" >> "$procdir"/"$af2dir"_af2.sh
-        echo "\
-All files will be copied to:
-$storage_dir$af2dir"
+rsync -vagu $procdir$af2dir $storage_dir
+" >> $procdir"$af2dir"_af2.sh
 fi
 
-sbatch "$procdir"/"$af2dir"_af2.sh
+sbatch $procdir"$af2dir"_af2.sh
