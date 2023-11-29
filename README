@@ -1,6 +1,22 @@
-# alphafold
+---------------------------------------------------------
+AlphaFold2-Multimer pipeline for a SLURM compute cluster.
+---------------------------------------------------------
 
 This is a script to submit AlphaFold2-Multimer jobs with minimal user input in a SLURM compute environment.
+
+The script expects available SLURM modules as follows:
+
+alphafold/2.3.2_conda
+cuda/11.8
+cudnn/8.8.3-cuda11
+ChimeraX
+
+(For ChimeraX, version 1.5 and above are required.)
+
+Install the script with Git:
+
+git clone https://github.com/evalkov/alphafold.git
+
 Once installed, add executable permissions with
 
 chmod +x alphafold/alphafold.sh
@@ -54,6 +70,8 @@ Afterward, if the script picks up Box.com credentials in the .netrc, the script 
 Note that these directories can be significant in size, especially for large predictions.
 
 Any questions or problems with the script can be reported to the author. Email can be found by searching for the author's name and affiliation below.
+
+The script is distributed under GNU General Public License v3.0.
 
 Eugene Valkov, D.Phil.
 Center for Cancer Research
