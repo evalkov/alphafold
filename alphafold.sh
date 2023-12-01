@@ -79,8 +79,8 @@ if [ ! -d "$directory" ] || [ ! -w "$directory" ]; then
 	echo "The specified directory does not exist, is not a directory, or is not writable: $directory"
 	exit 1
 else
-	mkdir -p ""$directory"$USER/"
-        procdir=""$directory"$USER/"
+	mkdir -p "$directory/"
+        procdir="$directory/"
 fi
 
 # Check if the file exists and is a file
@@ -282,9 +282,8 @@ done
 
 echo \"\
 matchmaker all to #1/\$max_chain pairing bs
-save $procdir"$af2dir"_chimera_align.cxs
 \" >> $procdir"$af2dir"_chimera_align.cxc
-ChimeraX --offscreen --script $procdir"$af2dir"_chimera_align.cxc --exit
+#ChimeraX --offscreen --script $procdir"$af2dir"_chimera_align.cxc --exit
 " >> $procdir"$af2dir"_af2.sh
 
 
@@ -299,6 +298,7 @@ show #1 cartoons
 view all
 hide atoms
 hide #1 models
+alphafold pae #1 file $procdir$af2dir/pae_model_1_multimer_v3_pred_0.json
 " > $procdir"$af2dir"_chimera_pae.cxc
 
 
@@ -323,39 +323,23 @@ select ~sel & ##selected
 alphafold pae #\$count file $procdir$af2dir/pae_model_1_multimer_v3_pred_0.json plot false
 alphafold contacts #\$count/\${chains[i]} to #\$count/\${chains[j]} distance 8 palette paecontacts range 0,30 radius 0.05 dashes 1
 del sel
-save $procdir"$af2dir"_chimera_pae.cxs
+color bfactor #1 palette alphafold
 \" >> $procdir"$af2dir"_chimera_pae.cxc
 	done
 done
-ChimeraX --offscreen --script $procdir"$af2dir"_chimera_pae.cxc --exit
 " >> $procdir"$af2dir"_af2.sh
 
 
 echo "\
-mv $procdir"$af2dir"*.cxs $procdir"$af2dir"/
 mv $procdir"$af2dir"_af2.sh $procdir"$af2dir"/
 mv $procdir"$af2dir".fa $procdir"$af2dir"/
-
 export_dir=\""$af2dir"_$(date +"%Y%m%d_%H%M%S")\"
 mkdir $procdir\$export_dir
 cp $procdir$af2dir/ranked*.pdb $procdir\$export_dir
 cp $procdir$af2dir/pae_model_1_multimer_v3_pred_0.json $procdir\$export_dir
-" >> $procdir"$af2dir"_af2.sh
-
-
-echo "\
-sed -e 's|$procdir$af2dir/||g' \\
-    -e '/save /d' \\
-    -e 's/ plot false//' \\
-    $procdir"$af2dir"_chimera_align.cxc > $procdir\$export_dir/"$af2dir"_chimera_align.cxc
-
-sed -e 's|$procdir$af2dir/||g' \\
-    -e '/save /d' \\
-    -e 's/ plot false//' \\
-    $procdir"$af2dir"_chimera_pae.cxc > $procdir\$export_dir/"$af2dir"_chimera_pae.cxc
-
+sed -e 's|$procdir$af2dir/||g' $procdir"$af2dir"_chimera_align.cxc > $procdir\$export_dir/align.cxc
+sed -e 's|$procdir$af2dir/||g' $procdir"$af2dir"_chimera_pae.cxc > $procdir\$export_dir/pae.cxc
 tar cjf $procdir"$af2dir".tar.bz2 -C $procdir \$export_dir
-mv $procdir"$af2dir"*.cxc $procdir"$af2dir"/
 " >> $procdir"$af2dir"_af2.sh
 
 echo "\
@@ -373,7 +357,9 @@ else
 	echo -e \"<img src=\"cid:animated.gif\" />\" | mutt -e 'set content_type=text/html' -s \"$af2dir\" -a $procdir$af2dir/animated.gif -e 'my_hdr From:AlphaFold2 (AlphaFold2)' -- $USER@nih.gov
 fi
 rm $procdir"$af2dir".tar.bz2
+cp $procdir\$export_dir/*.cxc $procdir"$af2dir" 
 rm -rf $procdir\$export_dir
+rm -rf $procdir"$af2dir"*chimera*.cxc
 " >> $procdir"$af2dir"_af2.sh
 
 if [ -e $HOME/.netrc ]; then
@@ -384,10 +370,6 @@ cd Alphafold
 mirror -R --no-symlinks $procdir$af2dir
 bye
 EOF
-" >> $procdir"$af2dir"_af2.sh
-	else
-        echo "\
-rsync -vagu $procdir$af2dir $storage_dir
 " >> $procdir"$af2dir"_af2.sh
 fi
 
