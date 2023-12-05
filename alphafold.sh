@@ -257,7 +257,7 @@ lighting simple shadows false intensity 0.5
 view all
 hide atoms
 show cartoons
-alphafold pae #1 file $procdir$af2dir/pae_model_1_multimer_v3_pred_0.json palette paegreen plot false
+alphafold pae #1 file $procdir$af2dir/pae_model_1_multimer_v3_pred_0.json palette paegreen
 hide all models
 show #1 models
 " > $procdir"$af2dir"_chimera_align.cxc
@@ -283,7 +283,6 @@ done
 echo \"\
 matchmaker all to #1/\$max_chain pairing bs
 \" >> $procdir"$af2dir"_chimera_align.cxc
-#ChimeraX --offscreen --script $procdir"$af2dir"_chimera_align.cxc --exit
 " >> $procdir"$af2dir"_af2.sh
 
 
@@ -323,10 +322,10 @@ select ~sel & ##selected
 alphafold pae #\$count file $procdir$af2dir/pae_model_1_multimer_v3_pred_0.json plot false
 alphafold contacts #\$count/\${chains[i]} to #\$count/\${chains[j]} distance 8 palette paecontacts range 0,30 radius 0.05 dashes 1
 del sel
-color bfactor #1 palette alphafold
 \" >> $procdir"$af2dir"_chimera_pae.cxc
 	done
 done
+echo \"color bfactor #1 palette alphafold \" >> $procdir"$af2dir"_chimera_pae.cxc
 " >> $procdir"$af2dir"_af2.sh
 
 
