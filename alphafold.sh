@@ -240,7 +240,7 @@ movie stop
 " > $procdir"$af2dir"_chimera_movie.cxc
 
 echo "\
-module load ChimeraX/1.7
+module load ChimeraX/1.6
 chimerax --offscreen --script $procdir"$af2dir"_chimera_movie.cxc --exit
 convert -dispose previous -delay 10 -loop 0 -dither None -colors 256 -layers Optimize -resize 500x500 -filter Lanczos -coalesce $procdir$af2dir/chimovie*.png $procdir$af2dir/animated.gif
 rm $procdir$af2dir/chimovie*.png
